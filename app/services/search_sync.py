@@ -1,0 +1,57 @@
+import asyncio
+import logging
+from sqlalchemy import event
+from app.models import MovieModel, TheatreModel
+from app.core.es_config import es
+
+logger = logging.getLogger(__name__)
+
+
+async def async_sync_to_es(instance_data):
+    """Sync movie or theatre data to Elasticsearch index."""
+    index_name = "booking_search"
+    model_type = instance_data["type"]
+    doc_id = f"{model_type}_{instance_data['id']}"
+
+    try:
+        if instance_data.get("is_hidden"):
+            await es.options(ignore_status=[404]).delete(index=index_name, id=doc_id)
+            return
+
+        doc = {
+            "name": instance_data["name"],
+            "type": model_type,
+            "db_id": str(instance_data["id"]),
+        }
+        await es.index(index=index_name, id=doc_id, body=doc)
+    except Exception:
+        logger.warning("Failed to sync %s to Elasticsearch", model_type)
+
+
+def sync_to_es_wrapper(target):
+    """Prepare instance data and trigger async Elasticsearch sync."""
+    instance_data = {
+        "id": target.id,
+        "name": target.name,
+        "type": "movie" if isinstance(target, MovieModel) else "theatre",
+        "is_hidden": getattr(target, "is_deleted", False)
+        or not getattr(target, "is_active", True),
+    }
+
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(async_sync_to_es(instance_data))
+    except RuntimeError:
+        asyncio.run(async_sync_to_es(instance_data))
+
+
+def handle_after_save(mapper, connection, target):
+    """Handle model changes and sync data to Elasticsearch."""
+    sync_to_es_wrapper(target)
+
+
+event.listen(MovieModel, "after_insert", handle_after_save)
+event.listen(MovieModel, "after_update", handle_after_save)
+
+event.listen(TheatreModel, "after_insert", handle_after_save)
+event.listen(TheatreModel, "after_update", handle_after_save)
