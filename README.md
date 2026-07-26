@@ -1,153 +1,124 @@
+# Movie Ticket Booking Platform
 
-# Movie Booking Backend - Overview
+[![Tests](https://github.com/Hemanshu007/BookYourShow/actions/workflows/test.yml/badge.svg)](https://github.com/Hemanshu007/BookYourShow/actions/workflows/test.yml)
+![Python](https://img.shields.io/badge/python-3.10-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-## 1. Introduction
+A production-grade backend for a movie ticket booking platform with real-time seat locking, role-based access control, and Elasticsearch-powered search. Built with FastAPI, PostgreSQL, and Redis.
 
-Backend system for a movie ticket booking platform with role-based access and real-time seat handling.
+## Features
 
----
+- **Real-time seat locking** — Redis atomic operations prevent double-bookings under concurrent load
+- **JWT + OTP authentication** — passwordless login via email OTP, Google OAuth, refresh token rotation
+- **RBAC** — admin / theatre-admin / user roles with permission-level route guards
+- **Full-text search** — Elasticsearch integration with auto-sync on data changes
+- **Seat layout caching** — Redis-backed layout with DB fallback, dynamic lock status overlay
+- **Show scheduling** — overlap detection, category-based pricing, ownership verification
+- **Load tested** — 200 concurrent users, 9,400+ requests, zero double-bookings verified
 
-## 2. Architecture
+## Tech Stack
 
-* Routes handle requests and responses
-* Services contain business logic
-* Repositories interact with database
-* Redis used for caching and locking
-* Elasticsearch used for search
+| Component | Technology |
+|-----------|-----------|
+| Framework | FastAPI (async) |
+| Database | PostgreSQL 16 + SQLAlchemy 2.0 (async) |
+| Cache / Lock | Redis |
+| Search | Elasticsearch 9.x |
+| Migrations | Alembic |
+| Auth | JWT (python-jose) + OTP via Redis |
+| Containerization | Docker + Docker Compose |
+| CI | GitHub Actions |
+| Package Manager | uv |
 
----
+## Quick Start
 
-## 3. Authentication Flow
+### With Docker (recommended)
 
-### OTP Login
+```bash
+# Clone the repo
+git clone https://github.com/Hemanshu007/BookYourShow.git
+cd BookYourShow
 
-1. User enters email
-2. OTP is generated and stored in Redis with expiry
-3. OTP is sent via email
-4. User submits OTP
-5. OTP is validated and removed
-6. Tokens are generated and set in cookies
+# Set up environment
+cp .env.example .env.docker
 
-### Google Login
+# Start all services
+docker compose up --build -d
 
-1. User is redirected to Google
-2. Authorization code is received
-3. Code is exchanged for user data
-4. User is created or logged in
+# Run migrations
+docker compose exec api uv run alembic upgrade head
 
----
+# Seed roles, permissions, and test users
+docker compose exec db psql -U postgres -d booking_dev -f /docker-entrypoint-initdb.d/seed_db.sql
+# Or from host:
+cat seed_db.sql | docker exec -i postgres_container psql -U postgres -d booking_dev
+```
 
-## 4. Role and Permission System
+API is now running at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
 
-* User is assigned a role
-* Role is mapped to permissions
-* Permission is checked before accessing protected routes
+### Without Docker
 
----
+```bash
+cp .env.example .env
+# Edit .env with your PostgreSQL, Redis, and Elasticsearch credentials
 
-## 5. Admin Flow
+uv sync
+uv run alembic upgrade head
+uv run fastapi dev app/main.py
+```
 
-1. Create user with role after OTP validation
-2. Create theatre
-3. Fetch movie data using IMDB ID and store
-4. View users, theatres, movies with pagination
-5. Delete entities using soft delete
+## API Endpoints
 
----
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/auth/send-otp` | — | Send OTP to email |
+| POST | `/auth/signin` | — | Sign in with OTP |
+| POST | `/auth/refresh-token` | Refresh token | Get new access token |
+| POST | `/admin/create-user` | Admin | Create user with role |
+| POST | `/admin/create-theatre` | Admin | Register theatre |
+| POST | `/admin/create-movie` | Admin | Add movie by IMDB ID |
+| POST | `/theatre-admin/create-layout` | Theatre Admin | Define seat layout |
+| POST | `/theatre-admin/create-screen` | Theatre Admin | Add screen to theatre |
+| POST | `/theatre-admin/create-show` | Theatre Admin | Schedule a show |
+| GET | `/users/movie/{id}/theatre` | — | Theatres showing a movie |
+| GET | `/users/show/{id}` | — | Show details + seat layout |
+| POST | `/users/show/{id}/seat-lock` | User | Lock seats (10-min TTL) |
+| POST | `/users/show/{id}/seat-book` | User | Book locked seats |
+| POST | `/users/booking/{id}/cancel` | User | Cancel booking |
+| GET | `/search/{query}` | — | Search movies & theatres |
 
-## 6. Theatre Admin Flow
+## Project Structure
 
-### Layout Creation
+```
+app/
+├── api/v1/           # Route handlers
+├── core/             # Config, Redis, auth dependencies
+├── db/               # Async engine + session
+├── middlewares/       # Rate limiting, exception handling
+├── models/           # SQLAlchemy models (15 tables)
+├── repositories/     # Database operations
+├── schemas/          # Pydantic request/response models
+├── services/         # Business logic (auth, booking, search, email)
+├── templates/        # Email templates
+└── utils/            # JWT, encryption helpers
 
-1. Validate theatre ownership
-2. Validate layout structure
-3. Transform layout into structured format
-4. Store layout
+tests/                # 58 tests (unit, integration, concurrency, edge cases)
+load_tests/           # Locust load test suite (200-user contention test)
+alembic/              # Database migrations
+```
 
-### Screen Creation
+## Testing
 
-1. Validate theatre ownership
-2. Validate layout belongs to theatre
-3. Create screen
+```bash
+# Run all tests
+uv run pytest tests/ -v
 
-### Show Creation
+# Run load test (requires running server)
+uv run python load_tests/seed.py
+uv run python -m locust -f load_tests/locustfile.py --host http://localhost:8000 --headless -u 200 -r 20 --run-time 60s
+uv run python load_tests/verify.py
+```
 
-1. Validate screen ownership
-2. Validate movie exists and get duration
-3. Validate show timing constraints
-4. Check overlapping shows
-5. Validate category pricing
-6. Create show
+## License
 
----
-
-## 7. User Flow
-
-### Browse
-
-1. Fetch movies by theatre
-2. Fetch theatres by movie
-3. Fetch shows for theatre and movie
-4. Fetch show details with layout
-
-### Seat Locking
-
-1. Fetch layout from Redis or generate
-2. Check seat availability
-3. Lock seats in Redis using atomic operation
-4. Set expiry for locks
-
-### Booking
-
-1. Validate locked seats belong to user
-2. Calculate total price
-3. Create booking in database
-4. Update seat status in Redis
-5. Remove locks
-
-### Account
-
-1. Delete user using soft delete
-
----
-
-## 8. Seat Layout System
-
-1. Fetch base layout from database
-2. Add pricing based on category
-3. Mark booked seats
-4. Store layout in Redis
-5. Update layout dynamically with locked seats
-
----
-
-## 9. Search System
-
-1. Store movie and theatre data in Elasticsearch
-2. Sync data on insert and update events
-3. Perform prefix-based search
-4. Return matched results with relevance score
-
----
-
-## 10. Caching Strategy
-
-* Redis used for OTP, layouts, and locks
-* Layout fetched from cache if available
-* Fallback to database if not present
-
----
-
-## 11. Key Design Decisions
-
-* Redis used for handling concurrency
-* Seat locking before booking
-* Validation separated from business logic
-* Soft delete for data safety
-* Layered architecture for scalability
-
----
-
-## 12. Conclusion
-
-System is designed to handle booking flow with focus on consistency, performance, and clean structure.
+[MIT](LICENSE)
