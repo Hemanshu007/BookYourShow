@@ -1,4 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, text
 from app.core.redis_config import Redis
 from app.repositories.movie_repository import MovieRepository
 from app.repositories.theatre_repository import TheatreRepository
@@ -163,30 +164,34 @@ class UserService:
     ):
         """Lock selected seats for a show."""
         layout_body = await self._get_layout(show_id, seat_layout_service)
-        locked_seats = await self.redis.hgetall(f"show_seat_locked_{show_id}")
+
+        for seat in seat_array:
+            row, col, _ = self._get_seat_info(layout_body, seat)
+            is_available = (
+                layout_body["layout"][row][col].get("status") == "Available"
+            )
+            if not is_available:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Seat {seat} is unavailable",
+                )
 
         async with self.redis.pipeline(transaction=True) as pipe:
             for seat in seat_array:
-                row, col, _ = self._get_seat_info(layout_body, seat)
-
-                is_available = (
-                    layout_body["layout"][row][col].get("status") == "Available"
-                )
-                if not is_available or seat in locked_seats:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Seat {seat} is unavailable",
-                    )
-
                 pipe.hsetnx(f"show_seat_locked_{show_id}", seat, user_id)
 
             results = await pipe.execute()
 
         if 0 in results:
+            failed = [seat for seat, ok in zip(seat_array, results) if ok == 0]
+            already_locked_by = {}
+            for s in failed:
+                val = await self.redis.hget(f"show_seat_locked_{show_id}", s)
+                already_locked_by[s] = val
             await self.redis.hdel(f"show_seat_locked_{show_id}", *seat_array)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="One or more seats were just locked by another user",
+                detail=f"Seats {failed} are locked by another user",
             )
 
         await self.redis.expire(f"show_seat_locked_{show_id}", 600)
@@ -211,6 +216,21 @@ class UserService:
         async with self.db.begin():
             self.show_repo.db = self.db
             self.booking_repo.db = self.db
+
+            for seat in seat_array:
+                result = await self.db.execute(
+                    text(
+                        "SELECT id FROM booked_seats_map "
+                        "WHERE show_id = :show_id AND seats_number = :seat "
+                        "AND is_cancelled = false"
+                    ),
+                    {"show_id": show_id, "seat": seat},
+                )
+                if result.fetchone():
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Seat {seat} is already booked by another user",
+                    )
 
             booking = await self.booking_repo.create_booking_repo(
                 user_id=UUID(user_id),

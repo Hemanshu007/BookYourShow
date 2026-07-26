@@ -42,6 +42,8 @@ services:
   redis:
     image: redis:alpine
     container_name: redis_container
+    ports:
+      - "6379:6379"
     volumes:
       - redis_data:/data
     restart: always
@@ -49,16 +51,21 @@ services:
   elasticsearch:
     image: elasticsearch:9.2.7
     container_name: elasticsearch_container
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     env_file:
       - .env.docker
     volumes:
       - elastic_data:/usr/share/elasticsearch/data
     restart: always
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "9200"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
 volumes:
   postgres_data:

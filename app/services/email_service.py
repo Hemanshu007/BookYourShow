@@ -1,9 +1,12 @@
 from pathlib import Path
+import logging
 from fastapi import HTTPException, status
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from app.core.config import settings
 import qrcode
 import tempfile
+
+logger = logging.getLogger(__name__)
 
 
 class EmailService:
@@ -45,10 +48,7 @@ class EmailService:
         try:
             await self.fastmail.send_message(message)
         except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to send verification email.",
-            )
+            logger.warning("Failed to send OTP email to %s (SMTP unavailable?)", email_to)
         
 
     async def send_qr_ticket(self, email_to: str, ticket_hash: str):
@@ -82,7 +82,4 @@ class EmailService:
         try:
             await self.fastmail.send_message(message)
         except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to send ticket email.",
-            )
+            logger.warning("Failed to send ticket email to %s (SMTP unavailable?)", email_to)
