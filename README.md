@@ -1,6 +1,5 @@
 # Movie Ticket Booking Platform
 
-[![Tests](https://github.com/Hemanshu007/BookYourShow/actions/workflows/test.yml/badge.svg)](https://github.com/Hemanshu007/BookYourShow/actions/workflows/test.yml)
 ![Python](https://img.shields.io/badge/python-3.10-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
