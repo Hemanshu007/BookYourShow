@@ -8,6 +8,63 @@ user_router = APIRouter(prefix="/users", tags=["users"])
 
 
 @user_router.get(
+    "/me",
+    status_code=status.HTTP_200_OK,
+    response_model=ResponseSchema,
+)
+async def get_current_user(user_id: GetUserDep, user_service: UserServiceDep):
+    """Fetch the profile of the currently authenticated user."""
+    return await user_service.get_current_user_service(user_id=user_id)
+
+
+@user_router.get(
+    "/movies",
+    status_code=status.HTTP_200_OK,
+    response_model=ResponseSchema,
+)
+async def get_all_movies(
+    user_service: UserServiceDep,
+    pagination: Annotated[PaginationSchema, Query()],
+):
+    """Fetch the paginated movie catalog."""
+    return await user_service.get_all_movies_service(
+        page=pagination.page, size=pagination.size
+    )
+
+
+@user_router.get(
+    "/bookings",
+    status_code=status.HTTP_200_OK,
+    response_model=ResponseSchema,
+)
+async def get_user_bookings(
+    user_id: GetUserDep,
+    user_service: UserServiceDep,
+    pagination: Annotated[PaginationSchema, Query()],
+):
+    """Fetch the current user's booking history."""
+    return await user_service.get_user_bookings_service(
+        user_id=user_id, page=pagination.page, size=pagination.size
+    )
+
+
+@user_router.get(
+    "/booking/{booking_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=ResponseSchema,
+)
+async def get_booking_detail(
+    booking_id: str,
+    user_id: GetUserDep,
+    user_service: UserServiceDep,
+):
+    """Fetch details of a single booking."""
+    return await user_service.get_booking_detail_service(
+        booking_id=booking_id, user_id=user_id
+    )
+
+
+@user_router.get(
     "/theatre/{theatre_id}/movies",
     status_code=status.HTTP_200_OK,
     response_model=ResponseSchema,

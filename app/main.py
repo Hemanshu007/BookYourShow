@@ -19,8 +19,15 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting application...")
-    await create_index()
-    logger.info("Elasticsearch index verified.")
+    try:
+        await create_index()
+        logger.info("Elasticsearch index verified.")
+    except Exception:
+        logger.warning(
+            "Elasticsearch unavailable at startup; search will degrade gracefully "
+            "until it comes back.",
+            exc_info=True,
+        )
 
     yield
 
@@ -39,7 +46,13 @@ app.add_middleware(
 )
 
 if not settings.ENV == "TESTING":
-    app.add_middleware(RateLimitingMiddleware, capacity=10, refill_rate=0.1)
+    # One token bucket per client IP, shared across every endpoint. The
+    # previous capacity=10/refill=0.1 (1 req/10s sustained) was tuned for
+    # abuse prevention on sensitive endpoints (e.g. OTP spam) but applied
+    # globally, it throttled ordinary SPA browsing — a single page load
+    # fires several parallel GETs. capacity=60/refill=1 still meaningfully
+    # limits abuse while giving normal interactive use headroom.
+    app.add_middleware(RateLimitingMiddleware, capacity=60, refill_rate=1.0)
 app.add_middleware(GlobalExceptionHandlerMiddleware)
 
 

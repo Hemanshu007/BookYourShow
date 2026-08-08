@@ -20,6 +20,8 @@ from app.utils.show_create_validation import (
     validate_show_overlap,
 )
 from app.utils.helper import decrypt_data
+from cryptography.fernet import InvalidToken
+import binascii
 from datetime import timezone, timedelta, datetime
 
 
@@ -251,9 +253,13 @@ class TheatreAdminService:
         ticket_hash: str
     ):
 
-        ticket_hash = ticket_hash.encode()
-
-        booking_id = await decrypt_data(encrypted_data=ticket_hash)
+        try:
+            booking_id = await decrypt_data(encrypted_data=ticket_hash.encode())
+        except (InvalidToken, binascii.Error, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid ticket",
+            )
 
         async with self.db.begin():
             self.booked_ticket_repo.db = self.db

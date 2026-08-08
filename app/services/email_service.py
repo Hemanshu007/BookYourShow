@@ -1,5 +1,5 @@
-from pathlib import Path
 import logging
+import os
 from fastapi import HTTPException, status
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from app.core.config import settings
@@ -23,7 +23,6 @@ class EmailService:
             MAIL_SSL_TLS=False,
             USE_CREDENTIALS=True,
             VALIDATE_CERTS=True,
-            TEMPLATE_FOLDER=Path(__file__).parent.parent / "templates/email",
         )
         self.fastmail = FastMail(self.conf)
 
@@ -61,7 +60,7 @@ class EmailService:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
             img.save(temp_file.name)
             temp_path = temp_file.name
-        
+
         body = f"""
         <html>
             <body style="text-align: center;">
@@ -70,7 +69,7 @@ class EmailService:
             </body>
         </html>
         """
-        
+
         message = MessageSchema(
             subject="Your Digital Ticket",
             recipients=[email_to],
@@ -78,8 +77,13 @@ class EmailService:
             subtype=MessageType.html,
             attachments=[temp_path]
         )
-        
+
         try:
             await self.fastmail.send_message(message)
         except Exception:
             logger.warning("Failed to send ticket email to %s (SMTP unavailable?)", email_to)
+        finally:
+            try:
+                os.remove(temp_path)
+            except OSError:
+                logger.warning("Failed to remove temp QR file %s", temp_path)

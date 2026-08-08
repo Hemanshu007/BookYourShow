@@ -156,3 +156,64 @@ class TestConcurrency:
             json={"seat_array": ["B1"]},
         )
         assert lock_resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    async def test_same_user_can_relock_own_seat(self, client, db):
+        ids = await build_chain(client)
+
+        token = await _create_user_and_get_token(client, "user7@concurrency.com")
+        client.headers.update({"Authorization": f"Bearer {token}"})
+
+        first = await client.post(
+            f"/api/v1/users/show/{ids['show_id']}/seat-lock",
+            json={"seat_array": ["A1"]},
+        )
+        assert first.status_code == status.HTTP_201_CREATED
+
+        # Re-locking the same seat as the same user (e.g. a retry after a page
+        # refresh) must succeed, not be treated as "locked by another user".
+        second = await client.post(
+            f"/api/v1/users/show/{ids['show_id']}/seat-lock",
+            json={"seat_array": ["A1"]},
+        )
+        assert second.status_code == status.HTTP_201_CREATED
+
+    async def test_failed_batch_lock_does_not_release_other_users_seat(self, client, db):
+        ids = await build_chain(client)
+
+        token1 = await _create_user_and_get_token(client, "user8@concurrency.com")
+        client.headers.update({"Authorization": f"Bearer {token1}"})
+
+        held = await client.post(
+            f"/api/v1/users/show/{ids['show_id']}/seat-lock",
+            json={"seat_array": ["A1"]},
+        )
+        assert held.status_code == status.HTTP_201_CREATED
+
+        token2 = await _create_user_and_get_token(client, "user9@concurrency.com")
+        client.headers.update({"Authorization": f"Bearer {token2}"})
+
+        # user2 requests A1 (already held by user1) and A2 (free) together.
+        # The whole batch must fail because of the A1 conflict.
+        conflicting = await client.post(
+            f"/api/v1/users/show/{ids['show_id']}/seat-lock",
+            json={"seat_array": ["A1", "A2"]},
+        )
+        assert conflicting.status_code == status.HTTP_400_BAD_REQUEST
+
+        # A2 was only newly claimed by user2's failed request, so it must have
+        # been rolled back and be free for user1 to lock now.
+        client.headers.update({"Authorization": f"Bearer {token1}"})
+        a2_now_free = await client.post(
+            f"/api/v1/users/show/{ids['show_id']}/seat-lock",
+            json={"seat_array": ["A2"]},
+        )
+        assert a2_now_free.status_code == status.HTTP_201_CREATED
+
+        # A1 was user1's *pre-existing* lock, untouched by user2's failed
+        # batch — it must still be held by user1, not released.
+        client.headers.update({"Authorization": f"Bearer {token2}"})
+        a1_still_held = await client.post(
+            f"/api/v1/users/show/{ids['show_id']}/seat-lock",
+            json={"seat_array": ["A1"]},
+        )
+        assert a1_still_held.status_code == status.HTTP_400_BAD_REQUEST

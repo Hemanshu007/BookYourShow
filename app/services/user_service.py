@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
+from sqlalchemy.exc import IntegrityError
 from app.core.redis_config import Redis
 from app.repositories.movie_repository import MovieRepository
 from app.repositories.theatre_repository import TheatreRepository
@@ -13,6 +14,8 @@ from app.schemas.movie_schema import MovieOutSchema
 from app.schemas.theatre_schema import TheatreOutSchema
 from app.schemas.standard_schema import ResponseSchema, create_response
 from app.schemas.show_schema import ShowDetailOutSchema
+from app.schemas.booking_schema import BookingOutSchema, BookingDetailOutSchema
+from app.schemas.user_schema import UserOutSchema
 from fastapi import status, HTTPException
 from app.services.email_service import EmailService
 
@@ -45,6 +48,22 @@ class UserService:
         self.user_repo = user_repo
         self.booked_ticket_repo = booked_ticket_repo
         self.email_service = email_service
+
+    async def get_all_movies_service(
+        self, page: int = 1, size: int = 10
+    ) -> ResponseSchema:
+        """Fetch the paginated movie catalog."""
+        async with self.db.begin():
+            self.movie_repo.db = self.db
+            movies = await self.movie_repo.get_all_movies(page=page, size=size)
+
+        movies_data = [
+            MovieOutSchema.model_validate(movie).model_dump(mode="json")
+            for movie in movies
+        ]
+        return create_response(
+            data=movies_data, message="Movies fetched successfully"
+        )
 
     async def get_movies_by_theatre_service(
         self, theatre_id: str, page: int = 1, size: int = 10
@@ -176,25 +195,39 @@ class UserService:
                     detail=f"Seat {seat} is unavailable",
                 )
 
+        lock_key = f"show_seat_locked_{show_id}"
+
         async with self.redis.pipeline(transaction=True) as pipe:
             for seat in seat_array:
-                pipe.hsetnx(f"show_seat_locked_{show_id}", seat, user_id)
+                pipe.hsetnx(lock_key, seat, user_id)
 
             results = await pipe.execute()
 
-        if 0 in results:
-            failed = [seat for seat, ok in zip(seat_array, results) if ok == 0]
-            already_locked_by = {}
-            for s in failed:
-                val = await self.redis.hget(f"show_seat_locked_{show_id}", s)
-                already_locked_by[s] = val
-            await self.redis.hdel(f"show_seat_locked_{show_id}", *seat_array)
+        # hsetnx returns False both when someone else holds the seat and when
+        # the requesting user already holds it themselves (e.g. a retry after
+        # a page refresh) — those aren't conflicts and must not be rejected.
+        newly_locked = [seat for seat, ok in zip(seat_array, results) if ok]
+        already_set = [seat for seat, ok in zip(seat_array, results) if not ok]
+
+        conflicts = []
+        if already_set:
+            holders = await self.redis.hmget(lock_key, already_set)
+            conflicts = [
+                seat for seat, holder in zip(already_set, holders) if holder != user_id
+            ]
+
+        if conflicts:
+            # Only roll back seats this call just claimed — deleting the
+            # whole requested batch would also release seats a *different*
+            # user legitimately locked before this request ever arrived.
+            if newly_locked:
+                await self.redis.hdel(lock_key, *newly_locked)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Seats {failed} are locked by another user",
+                detail=f"Seats {conflicts} are locked by another user",
             )
 
-        await self.redis.expire(f"show_seat_locked_{show_id}", 600)
+        await self.redis.expire(lock_key, 600)
         return create_response(message="Seats Locked Successfully")
 
     async def book_ticket_service(self, show_id: str, user_id: str, seat_array: list):
@@ -213,48 +246,54 @@ class UserService:
             _, _, price = self._get_seat_info(layout_body, seat)
             total_bill += price
 
-        async with self.db.begin():
-            self.show_repo.db = self.db
-            self.booking_repo.db = self.db
+        try:
+            async with self.db.begin():
+                self.show_repo.db = self.db
+                self.booking_repo.db = self.db
 
-            for seat in seat_array:
-                result = await self.db.execute(
-                    text(
-                        "SELECT id FROM booked_seats_map "
-                        "WHERE show_id = :show_id AND seats_number = :seat "
-                        "AND is_cancelled = false"
-                    ),
-                    {"show_id": show_id, "seat": seat},
-                )
-                if result.fetchone():
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Seat {seat} is already booked by another user",
+                for seat in seat_array:
+                    result = await self.db.execute(
+                        text(
+                            "SELECT id FROM booked_seats_map "
+                            "WHERE show_id = :show_id AND seats_number = :seat "
+                            "AND is_cancelled = false"
+                        ),
+                        {"show_id": show_id, "seat": seat},
                     )
+                    if result.fetchone():
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Seat {seat} is already booked by another user",
+                        )
 
-            booking = await self.booking_repo.create_booking_repo(
-                user_id=UUID(user_id),
-                show_id=UUID(show_id),
-                seat_array=seat_array,
-                total_bill=total_bill,
-            )
+                booking = await self.booking_repo.create_booking_repo(
+                    user_id=UUID(user_id),
+                    show_id=UUID(show_id),
+                    seat_array=seat_array,
+                    total_bill=total_bill,
+                )
 
-            booking_id = booking.id
+                booking_id = booking.id
 
-            show_end_time = await self.show_repo.get_show_end_time(
-                show_id=show_id
-            )
+                show_end_time = await self.show_repo.get_show_end_time(
+                    show_id=show_id
+                )
 
-            ticket_hash = await encrypt_data(data=str(booking_id))
+                ticket_hash = await encrypt_data(data=str(booking_id))
 
-            ticket = await self.booked_ticket_repo.create_booking_ticket(
-                booking_id=booking_id,
-                expired_time=show_end_time,
-                ticket_hash=ticket_hash
-            )
+                ticket = await self.booked_ticket_repo.create_booking_ticket(
+                    booking_id=booking_id,
+                    expired_time=show_end_time,
+                    ticket_hash=ticket_hash
+                )
 
-            user = await self.user_repo.get_user_by_id(
-                user_id=user_id
+                user = await self.user_repo.get_user_by_id(
+                    user_id=user_id
+                )
+        except IntegrityError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="One or more selected seats were just booked by another user",
             )
 
         await self.email_service.send_qr_ticket(
@@ -275,6 +314,75 @@ class UserService:
         return create_response(
             message="Tickets Booked Successfully",
             data={"booking_id": str(booking.id), "total_paid": total_bill},
+        )
+
+    async def get_current_user_service(self, user_id: str) -> ResponseSchema:
+        """Fetch the profile of the currently authenticated user."""
+        async with self.db.begin():
+            self.user_repo.db = self.db
+            user = await self.user_repo.get_user_profile_repo(user_id=user_id)
+
+        user_data = UserOutSchema.model_validate(user).model_dump(mode="json")
+        return create_response(data=user_data, message="User profile fetched successfully")
+
+    @staticmethod
+    def _booking_to_dict(booking) -> dict:
+        return {
+            "id": booking.id,
+            "show_id": booking.show_id,
+            "total_bill": booking.total_bill,
+            "number_of_seats": booking.number_of_seats,
+            "is_cancelled": booking.is_cancelled,
+            "movie_name": booking.show.movie.name,
+            "theatre_name": booking.show.screen.theatre.name,
+            "screen_name": booking.show.screen.name,
+            "show_time": booking.show.start_time,
+        }
+
+    async def get_user_bookings_service(
+        self, user_id: str, page: int = 1, size: int = 10
+    ) -> ResponseSchema:
+        """Fetch the current user's booking history, most recent first."""
+        async with self.db.begin():
+            self.booking_repo.db = self.db
+            bookings = await self.booking_repo.get_user_bookings_repo(
+                user_id=UUID(user_id), page=page, size=size
+            )
+
+            bookings_data = [
+                BookingOutSchema(**self._booking_to_dict(booking)).model_dump(
+                    mode="json"
+                )
+                for booking in bookings
+            ]
+
+        return create_response(
+            data=bookings_data, message="Bookings fetched successfully"
+        )
+
+    async def get_booking_detail_service(
+        self, booking_id: str, user_id: str
+    ) -> ResponseSchema:
+        """Fetch full details of a single booking belonging to the user."""
+        async with self.db.begin():
+            self.booking_repo.db = self.db
+            booking = await self.booking_repo.get_booking_detail_repo(
+                booking_id=UUID(booking_id), user_id=UUID(user_id)
+            )
+
+            if not booking:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Booking not found",
+                )
+
+            booking_data = BookingDetailOutSchema(
+                **self._booking_to_dict(booking),
+                seats=[seat.seats_number for seat in booking.booked_seat_list],
+            ).model_dump(mode="json")
+
+        return create_response(
+            data=booking_data, message="Booking details fetched successfully"
         )
 
     async def delete_user_service(self, user_id: str):

@@ -62,9 +62,7 @@ def auth_login_google(
     return auth_service.auth_login_google_service()
 
 
-@google_auth_router.get(
-    "/callback", status_code=status.HTTP_200_OK, response_model=ResponseSchema
-)
+@google_auth_router.get("/callback", response_class=RedirectResponse)
 async def auth_google_callback(
     code: str,
     db: DBDep,

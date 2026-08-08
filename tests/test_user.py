@@ -227,3 +227,99 @@ class TestUser:
         body = response.json()
         assert_response_structure(body)
         assert "deleted" in body["message"].lower()
+
+    async def test_get_current_user_success(self, client):
+        await signin_as_user(client)
+
+        response = await client.get("/api/v1/users/me")
+
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert_response_structure(body)
+        assert body["data"]["email"] == "regularuser@example.com"
+        assert body["data"]["role"] == "user"
+
+    async def test_get_current_user_requires_auth(self, client):
+        response = await client.get("/api/v1/users/me")
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    async def test_get_all_movies_success(self, client):
+        ids = await build_full_chain(client)
+        client.headers.pop("Authorization", None)
+
+        response = await client.get(
+            "/api/v1/users/movies", params={"page": 1, "size": 10}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert_list_response(body)
+        assert any(m["id"] == ids["movie_id"] for m in body["data"])
+
+    async def test_get_user_bookings_success(self, client):
+        ids = await build_full_chain(client)
+        await signin_as_user(client)
+
+        book_resp = await client.post(
+            f"/api/v1/users/show/{ids['show_id']}/seat-lock",
+            json={"seat_array": ["A3"]},
+        )
+        book_resp = await client.post(
+            f"/api/v1/users/show/{ids['show_id']}/seat-book",
+            json={"seat_array": ["A3"]},
+        )
+        booking_id = book_resp.json()["data"]["booking_id"]
+
+        response = await client.get(
+            "/api/v1/users/bookings", params={"page": 1, "size": 10}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert_list_response(body)
+        booking = next(b for b in body["data"] if b["id"] == booking_id)
+        assert booking["movie_name"] == "The Shawshank Redemption"
+        assert booking["theatre_name"] == "pvr cinemas"
+        assert booking["is_cancelled"] is False
+
+    async def test_get_booking_detail_success(self, client):
+        ids = await build_full_chain(client)
+        await signin_as_user(client)
+
+        await client.post(
+            f"/api/v1/users/show/{ids['show_id']}/seat-lock",
+            json={"seat_array": ["A1"]},
+        )
+        book_resp = await client.post(
+            f"/api/v1/users/show/{ids['show_id']}/seat-book",
+            json={"seat_array": ["A1"]},
+        )
+        booking_id = book_resp.json()["data"]["booking_id"]
+
+        response = await client.get(f"/api/v1/users/booking/{booking_id}")
+
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert_response_structure(body)
+        assert body["data"]["seats"] == ["A1"]
+        assert body["data"]["show_id"] == ids["show_id"]
+
+    async def test_get_booking_detail_not_found_for_other_user(self, client):
+        ids = await build_full_chain(client)
+        await signin_as_user(client)
+
+        await client.post(
+            f"/api/v1/users/show/{ids['show_id']}/seat-lock",
+            json={"seat_array": ["B1"]},
+        )
+        book_resp = await client.post(
+            f"/api/v1/users/show/{ids['show_id']}/seat-book",
+            json={"seat_array": ["B1"]},
+        )
+        booking_id = book_resp.json()["data"]["booking_id"]
+
+        await signin_as_admin(client)
+        response = await client.get(f"/api/v1/users/booking/{booking_id}")
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND

@@ -128,6 +128,23 @@ class AdminService:
                 detail=data.get("Error", "Movie not found"),
             )
 
+        runtime_raw = data.get("Runtime", "")
+        rating_raw = data.get("imdbRating", "")
+        try:
+            duration = timedelta(minutes=int(runtime_raw.split(" ")[0]))
+        except (ValueError, IndexError, AttributeError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Movie data is incomplete: runtime unavailable",
+            )
+        try:
+            rating = float(rating_raw)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Movie data is incomplete: rating unavailable",
+            )
+
         # ---------- DB OPERATIONS ----------
         async with self.db.begin():
             self.movie_repo.db = self.db
@@ -144,10 +161,10 @@ class AdminService:
 
             movie = await self.movie_repo.create_new_movie_repo(
                 name=data.get("Title"),
-                duration=timedelta(minutes=int(data.get("Runtime").split(" ")[0])),
+                duration=duration,
                 description=data.get("Plot"),
                 genre=data.get("Genre"),
-                rating=float(data.get("imdbRating")),
+                rating=rating,
                 imdb_id=imdb_id,
             )
 

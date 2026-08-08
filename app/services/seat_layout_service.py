@@ -150,7 +150,8 @@ class SeatLayoutService:
     async def get_booked_seats(self, show_id: str) -> list:
         """Fetch booked seats for a show."""
         query = select(BookedSeatMapModel.seats_number).where(
-            BookedSeatMapModel.show_id == show_id
+            BookedSeatMapModel.show_id == show_id,
+            BookedSeatMapModel.is_cancelled == False,
         )
         result = await self.db.execute(query)
         return result.scalars().all()

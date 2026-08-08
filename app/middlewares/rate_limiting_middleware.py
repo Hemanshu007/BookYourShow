@@ -13,6 +13,13 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
         self.refill_rate = refill_rate
 
     async def dispatch(self, request: Request, call_next):
+        # CORS preflight requests carry no user action and no auth; browsers
+        # send one before nearly every cross-origin request, so counting them
+        # against the same bucket as real requests halves the effective limit
+        # for any browser client.
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         client_ip = request.client.host
         key = f"rate_limit:{client_ip}"
         now = time.time()

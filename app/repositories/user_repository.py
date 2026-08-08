@@ -120,3 +120,22 @@ class UserRepository:
             )
 
         return user_found
+
+    async def get_user_profile_repo(self, user_id: str) -> UserModel:
+        """Fetch a user with role and profile details for the current-user endpoint."""
+        query = (
+            select(UserModel)
+            .where(UserModel.id == user_id)
+            .options(selectinload(UserModel.role), selectinload(UserModel.user_detail))
+        )
+
+        result = await self.db.execute(query)
+
+        user_found = result.scalar_one_or_none()
+
+        if not user_found:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            )
+
+        return user_found

@@ -152,18 +152,32 @@ security = HTTPBearer()
 # --- AUTHENTICATION HELPERS ---
 async def get_user_id(
     token_data: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    db: DBDep,
+    user_repo: UserRepoDep,
 ) -> str:
     """Extract user ID from access token using HTTPBearer."""
     token = token_data.credentials
 
     payload = decode_token(token=token, secret=settings.JWT_SECRET_ACCESS_KEY)
 
-    if not payload or "sub" not in payload:
+    if not payload or "sub" not in payload or payload.get("type") != "access":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
         )
 
-    return payload["sub"]
+    user_id = payload["sub"]
+
+    async with db.begin():
+        user_repo.db = db
+        user = await user_repo.get_user_by_id(user_id=user_id)
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is inactive or deleted",
+        )
+
+    return user_id
 
 
 GetUserDep = Annotated[str, Depends(get_user_id)]

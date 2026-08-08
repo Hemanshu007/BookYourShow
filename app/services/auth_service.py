@@ -98,7 +98,7 @@ class AuthService:
 
     async def auth_google_callback_service(
         self, code: str, db: AsyncSession, response: Response
-    ):
+    ) -> RedirectResponse:
         """Handle Google OAuth callback and log in the user."""
         token_data = {
             "code": code,
@@ -155,9 +155,11 @@ class AuthService:
                 payload={"user_id": str(user.id)}, response=response
             )
 
-        return create_response(
-            data={"email": user.email, **tokens}, message="Login successful"
-        )
+        # Tokens are passed in the URL fragment (not the query string) so the
+        # browser keeps them client-side only — they're never sent to the
+        # server, logged in access logs, or leaked via the Referer header.
+        fragment = urlencode(tokens)
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/auth/callback#{fragment}")
 
     async def auth_refresh_token_service(
         self, refresh_token: str, db: AsyncSession, response: Response

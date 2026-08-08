@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from app.models import ShowModel, ScreenModel, TheatreModel, TheatreOperatorMapModel, MovieModel
 from sqlalchemy import select, desc
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import selectinload, joinedload
 from app.services.seat_layout_service import SeatLayoutService
 from fastapi import HTTPException, status
@@ -89,6 +89,7 @@ class ShowRepository:
                 ShowModel.movie_id == movie_id,
                 ScreenModel.theatre_id == theatre_id,
                 ShowModel.is_deleted == False,
+                ShowModel.start_time > datetime.now(timezone.utc).replace(tzinfo=None),
             )
             .options(
                 joinedload(ShowModel.movie),
