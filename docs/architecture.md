@@ -3,10 +3,18 @@
 ## Overview
 
 ```
-Client → FastAPI Routes → Services → Repositories → PostgreSQL
-                ↓                              ↑
-            Redis (cache/lock)        Elasticsearch (search)
+React SPA → FastAPI Routes → Services → Repositories → PostgreSQL
+                    ↓                              ↑
+                Redis (cache/lock)        Elasticsearch (search)
 ```
+
+## Frontend
+
+A React SPA (`frontend/`) talks to the API over plain REST + JWT — no server-side rendering, no shared session state with the backend beyond the token pair.
+
+- **Auth**: access token kept in memory, refresh token in `localStorage`. An axios interceptor catches `401`s, refreshes once (de-duplicated across concurrent requests via a shared in-flight promise), retries the original request, and only logs the user out if the refresh itself fails.
+- **Server state**: TanStack Query owns all API data — caching, loading/error states, and polling. The seat-selection screen refetches the layout on an interval while the user is choosing seats, so another user's lock shows up without a manual refresh.
+- **Seat locking UX**: selecting seats is purely local state; `POST seat-lock` is called once on "Continue," starting a 10-minute countdown that mirrors the Redis lock TTL. If it expires before `seat-book` is called, the selection resets and the layout is refetched.
 
 ## Layers
 
