@@ -28,6 +28,18 @@ services:
         - action: rebuild
           path: ./uv.lock
 
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8000/api/v1
+    container_name: frontend_container
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    restart: always
+
   db:
     image: postgres:16-alpine
     ports:
