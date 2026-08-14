@@ -21,56 +21,53 @@ export default function ProfilePage() {
 
   if (isLoading || !user) return <Spinner label="Loading profile..." />;
 
+  const initial = (user.user_detail?.first_name ?? user.email)[0]?.toUpperCase();
+
   return (
-    <div className="mx-auto max-w-md rounded-lg border border-neutral-200 p-6 dark:border-neutral-800">
-      <h1 className="mb-4 text-xl font-semibold">Profile</h1>
-
-      <dl className="space-y-2 text-sm">
-        <Row label="Email" value={user.email} />
-        <Row label="Role" value={user.role} />
-        {user.user_detail?.first_name && (
-          <Row
-            label="Name"
-            value={`${user.user_detail.first_name} ${user.user_detail.last_name ?? ""}`.trim()}
-          />
-        )}
-      </dl>
-
-      <div className="mt-6 border-t border-neutral-100 pt-4 dark:border-neutral-800">
-        {confirmingDelete ? (
-          <div className="flex gap-2">
-            <button
-              onClick={() => deleteMutation.mutate()}
-              disabled={deleteMutation.isPending}
-              className="rounded-md bg-red-600 px-4 py-2 text-sm text-white disabled:opacity-50"
-            >
-              {deleteMutation.isPending ? "Deleting..." : "Yes, delete my account"}
-            </button>
-            <button
-              onClick={() => setConfirmingDelete(false)}
-              className="rounded-md border border-neutral-300 px-4 py-2 text-sm dark:border-neutral-700"
-            >
-              Cancel
-            </button>
+    <div className="mx-auto max-w-md">
+      <div className="card p-6">
+        <div className="mb-6 flex items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-brand-500)] text-xl font-bold text-white">
+            {initial}
           </div>
-        ) : (
-          <button
-            onClick={() => setConfirmingDelete(true)}
-            className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
-          >
-            Delete account
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
+          <div>
+            <p className="font-semibold">
+              {user.user_detail?.first_name
+                ? `${user.user_detail.first_name} ${user.user_detail.last_name ?? ""}`.trim()
+                : user.email}
+            </p>
+            <span className="badge badge-neutral mt-1">{user.role}</span>
+          </div>
+        </div>
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between border-b border-neutral-100 pb-2 dark:border-neutral-800">
-      <dt className="text-neutral-500">{label}</dt>
-      <dd className="font-medium">{value}</dd>
+        <dl className="space-y-2 text-sm">
+          <div className="flex justify-between border-b border-[var(--color-ink-100)] pb-2 dark:border-[var(--color-ink-700)]">
+            <dt className="text-[var(--color-ink-500)]">Email</dt>
+            <dd className="font-medium">{user.email}</dd>
+          </div>
+        </dl>
+
+        <div className="mt-6 border-t border-[var(--color-ink-100)] pt-5 dark:border-[var(--color-ink-700)]">
+          {confirmingDelete ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                className="btn btn-primary"
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Yes, delete my account"}
+              </button>
+              <button onClick={() => setConfirmingDelete(false)} className="btn btn-ghost">
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmingDelete(true)} className="btn btn-danger">
+              Delete account
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

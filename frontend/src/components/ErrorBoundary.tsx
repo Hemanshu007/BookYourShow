@@ -22,16 +22,13 @@ export default class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.error) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-950">
+        <div className="flex min-h-screen items-center justify-center bg-[var(--color-ink-50)] dark:bg-[var(--color-ink-950)]">
           <div className="mx-auto max-w-sm text-center">
-            <h1 className="mb-2 text-xl font-semibold">Something went wrong</h1>
-            <p className="mb-6 text-sm text-neutral-500">
+            <h1 className="mb-2 text-xl font-bold">Something went wrong</h1>
+            <p className="mb-6 text-sm text-[var(--color-ink-500)]">
               An unexpected error occurred. Try reloading the page.
             </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="rounded-md bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
-            >
+            <button onClick={() => window.location.reload()} className="btn btn-primary">
               Reload
             </button>
           </div>

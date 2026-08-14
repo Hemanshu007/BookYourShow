@@ -106,3 +106,22 @@ export interface SearchResults {
   items: SearchResultItem[];
   total: number;
 }
+
+export interface Screen {
+  id: string;
+  name: string;
+  theatre_id: string;
+  theatre_name: string;
+  layout_id: string;
+  layout_name: string;
+}
+
+export interface LayoutGridCell {
+  grid_type: "seat" | "wall" | null;
+  category: string | null;
+}
+
+export interface RawLayoutPayload {
+  layout: (LayoutGridCell | null)[][];
+  metadata: { grid_rows: number; grid_columns: number };
+}

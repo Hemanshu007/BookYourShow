@@ -15,12 +15,12 @@ export default function MoviePage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-semibold">Theatres screening this movie</h1>
+      <h1 className="mb-5 text-xl font-bold">Theatres screening this movie</h1>
 
       {isLoading && <CardSkeletonGrid count={3} />}
-      {isError && <p className="text-red-600">Could not load theatres.</p>}
+      {isError && <p className="text-[var(--color-brand-500)]">Could not load theatres.</p>}
       {theatres && theatres.length === 0 && (
-        <p className="text-neutral-500">No theatres are screening this movie right now.</p>
+        <p className="text-[var(--color-ink-500)]">No theatres are screening this movie right now.</p>
       )}
 
       {!isLoading && (

@@ -94,14 +94,11 @@ export default function SeatSelectionPage() {
 
   if (!accessToken) {
     return (
-      <div className="mx-auto max-w-md text-center">
-        <p className="mb-4 text-neutral-600 dark:text-neutral-400">
+      <div className="card mx-auto max-w-md p-8 text-center">
+        <p className="mb-4 text-[var(--color-ink-500)]">
           Log in to select seats and book tickets.
         </p>
-        <button
-          onClick={() => navigate("/login")}
-          className="rounded-md bg-purple-600 px-4 py-2 text-white"
-        >
+        <button onClick={() => navigate("/login")} className="btn btn-primary">
           Log in
         </button>
       </div>
@@ -109,26 +106,30 @@ export default function SeatSelectionPage() {
   }
 
   if (isLoading) return <Spinner label="Loading seat layout..." />;
-  if (isError || !layout) return <p className="text-red-600">Could not load seat layout.</p>;
+  if (isError || !layout) return <p className="text-[var(--color-brand-500)]">Could not load seat layout.</p>;
 
   return (
     <div>
       {error && (
-        <p className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-400">
+        <p className="mb-4 rounded-lg bg-[var(--color-brand-500)]/10 p-3 text-sm text-[var(--color-brand-500)]">
           {error}
         </p>
       )}
 
-      <SeatGrid layout={layout} selected={selected} onToggleSeat={toggleSeat} />
+      <div className="card p-6 sm:p-10">
+        <SeatGrid layout={layout} selected={selected} onToggleSeat={toggleSeat} />
+      </div>
 
-      <div className="sticky bottom-0 mt-6 flex items-center justify-between rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="sticky bottom-4 mt-6 flex items-center justify-between rounded-xl border border-[var(--color-ink-100)] bg-white/95 p-4 shadow-lg backdrop-blur dark:border-[var(--color-ink-700)] dark:bg-[var(--color-ink-900)]/95">
         <div>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-[var(--color-ink-500)]">
             {selected.size} seat(s) selected
           </p>
-          <p className="text-lg font-semibold">₹{totalPrice}</p>
+          <p className="text-xl font-extrabold tabular-nums">₹{totalPrice}</p>
           {phase === "locked" && (
-            <p className="text-xs text-amber-600">Locked — complete within {countdown.label}</p>
+            <p className="text-xs font-semibold text-[var(--color-warn-500)]">
+              Locked — complete within {countdown.label}
+            </p>
           )}
         </div>
 
@@ -136,7 +137,7 @@ export default function SeatSelectionPage() {
           <button
             disabled={selected.size === 0 || lockMutation.isPending}
             onClick={() => lockMutation.mutate()}
-            className="rounded-md bg-purple-600 px-5 py-2 text-white disabled:opacity-40"
+            className="btn btn-primary px-6 py-2.5"
           >
             {lockMutation.isPending ? "Locking..." : "Lock Seats"}
           </button>
@@ -144,7 +145,8 @@ export default function SeatSelectionPage() {
           <button
             disabled={bookMutation.isPending}
             onClick={() => bookMutation.mutate()}
-            className="rounded-md bg-emerald-600 px-5 py-2 text-white disabled:opacity-40"
+            className="btn px-6 py-2.5 text-white"
+            style={{ background: "var(--color-ok-500)" }}
           >
             {bookMutation.isPending ? "Booking..." : "Confirm & Pay"}
           </button>

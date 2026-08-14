@@ -25,65 +25,65 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto max-w-sm">
-      <h1 className="mb-6 text-2xl font-semibold">Log in</h1>
-
-      {step === "email" ? (
-        <form onSubmit={handleSendOtp} className="space-y-3">
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
-          />
-          <button
-            type="submit"
-            disabled={sendOtp.isPending}
-            className="w-full rounded-md bg-purple-600 py-2 text-white hover:bg-purple-700 disabled:opacity-50"
-          >
-            {sendOtp.isPending ? "Sending..." : "Send OTP"}
-          </button>
-          {sendOtp.isError && (
-            <p className="text-sm text-red-600">{(sendOtp.error as Error).message}</p>
-          )}
-        </form>
-      ) : (
-        <form onSubmit={handleSignin} className="space-y-3">
-          <p className="text-sm text-neutral-500">OTP sent to {email}</p>
-          <input
-            required
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            placeholder="6-digit code"
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
-          />
-          <button
-            type="submit"
-            disabled={signin.isPending}
-            className="w-full rounded-md bg-purple-600 py-2 text-white hover:bg-purple-700 disabled:opacity-50"
-          >
-            {signin.isPending ? "Verifying..." : "Verify & Continue"}
-          </button>
-          {signin.isError && (
-            <p className="text-sm text-red-600">{(signin.error as Error).message}</p>
-          )}
-        </form>
-      )}
-
-      <div className="my-4 flex items-center gap-3 text-xs text-neutral-400">
-        <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
-        OR
-        <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
+    <div className="mx-auto max-w-sm py-8">
+      <div className="mb-8 text-center">
+        <h1 className="text-2xl font-extrabold">Welcome back</h1>
+        <p className="mt-1 text-sm text-[var(--color-ink-500)]">
+          Sign in to book your next show
+        </p>
       </div>
 
-      <a
-        href={googleLoginUrl()}
-        className="block w-full rounded-md border border-neutral-300 py-2 text-center hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900"
-      >
-        Continue with Google
-      </a>
+      <div className="card p-6">
+        {step === "email" ? (
+          <form onSubmit={handleSendOtp} className="space-y-3">
+            <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-400)]">
+              Email
+            </label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="input"
+            />
+            <button type="submit" disabled={sendOtp.isPending} className="btn btn-primary w-full">
+              {sendOtp.isPending ? "Sending..." : "Send OTP"}
+            </button>
+            {sendOtp.isError && (
+              <p className="text-sm text-[var(--color-brand-500)]">{(sendOtp.error as Error).message}</p>
+            )}
+          </form>
+        ) : (
+          <form onSubmit={handleSignin} className="space-y-3">
+            <p className="text-sm text-[var(--color-ink-500)]">OTP sent to <strong>{email}</strong></p>
+            <input
+              required
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              placeholder="6-digit code"
+              className="input text-center text-lg tracking-[0.3em]"
+              maxLength={6}
+            />
+            <button type="submit" disabled={signin.isPending} className="btn btn-primary w-full">
+              {signin.isPending ? "Verifying..." : "Verify & Continue"}
+            </button>
+            {signin.isError && (
+              <p className="text-sm text-[var(--color-brand-500)]">{(signin.error as Error).message}</p>
+            )}
+          </form>
+        )}
+
+        <div className="my-5 flex items-center gap-3 text-xs text-[var(--color-ink-400)]">
+          <div className="h-px flex-1 bg-[var(--color-ink-100)] dark:bg-[var(--color-ink-700)]" />
+          OR
+          <div className="h-px flex-1 bg-[var(--color-ink-100)] dark:bg-[var(--color-ink-700)]" />
+        </div>
+
+        <a href={googleLoginUrl()} className="btn btn-ghost w-full">
+          Continue with Google
+        </a>
+      </div>
     </div>
   );
 }

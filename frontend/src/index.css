@@ -1,9 +1,161 @@
 @import "tailwindcss";
 
+@theme {
+  /* Cinematic palette — near-black "theatre" ground with a marquee-red accent */
+  --color-ink-950: #0b0a0d;
+  --color-ink-900: #131116;
+  --color-ink-800: #1c1920;
+  --color-ink-700: #2a252e;
+  --color-ink-600: #3d3641;
+  --color-ink-500: #5c5561;
+  --color-ink-400: #837c8a;
+  --color-ink-300: #aca6b1;
+  --color-ink-200: #d3cfd8;
+  --color-ink-100: #ece9f0;
+  --color-ink-50: #f7f6f9;
+
+  --color-brand-600: #c81e3a;
+  --color-brand-500: #e2294a;
+  --color-brand-400: #ef4a68;
+  --color-brand-300: #f57e93;
+
+  --color-gold-500: #d9a94a;
+  --color-gold-400: #e6bb6a;
+
+  --color-ok-500: #2f9e5a;
+  --color-ok-400: #45b96f;
+  --color-warn-500: #d99a1f;
+  --color-warn-400: #e6b34c;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "Cascadia Code", Consolas, monospace;
+}
+
 :root {
   color-scheme: light dark;
 }
 
 body {
   margin: 0;
+  background: var(--color-ink-50);
+  color: var(--color-ink-900);
+  font-family: var(--font-sans);
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: var(--color-ink-950);
+    color: var(--color-ink-100);
+  }
+}
+
+h1, h2, h3, h4 {
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--color-brand-500);
+  color: white;
+}
+
+/* Reusable component classes — kept small and composable so pages stay
+   readable instead of repeating long utility strings everywhere. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 0.6rem;
+  padding: 0.6rem 1.1rem;
+  transition: background-color 0.15s, color 0.15s, opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+.btn-primary {
+  background: var(--color-brand-500);
+  color: white;
+}
+.btn-primary:hover:not(:disabled) { background: var(--color-brand-600); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-ink-900);
+  border: 1px solid var(--color-ink-200);
+}
+.btn-ghost:hover:not(:disabled) { background: var(--color-ink-100); }
+
+@media (prefers-color-scheme: dark) {
+  .btn-ghost {
+    color: var(--color-ink-100);
+    border-color: var(--color-ink-700);
+  }
+  .btn-ghost:hover:not(:disabled) { background: var(--color-ink-800); }
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--color-brand-500);
+  border: 1px solid var(--color-brand-500);
+}
+.btn-danger:hover:not(:disabled) { background: var(--color-brand-500); color: white; }
+
+.card {
+  background: white;
+  border: 1px solid var(--color-ink-100);
+  border-radius: 0.9rem;
+  box-shadow: 0 1px 2px rgba(20, 10, 15, 0.04);
+}
+@media (prefers-color-scheme: dark) {
+  .card {
+    background: var(--color-ink-900);
+    border-color: var(--color-ink-700);
+  }
+}
+
+.input {
+  width: 100%;
+  border-radius: 0.6rem;
+  border: 1px solid var(--color-ink-200);
+  background: white;
+  color: var(--color-ink-900);
+  padding: 0.6rem 0.8rem;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input:focus {
+  border-color: var(--color-brand-500);
+  box-shadow: 0 0 0 3px rgba(226, 41, 74, 0.15);
+}
+@media (prefers-color-scheme: dark) {
+  .input {
+    background: var(--color-ink-800);
+    border-color: var(--color-ink-700);
+    color: var(--color-ink-100);
+  }
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+.badge-ok { background: rgba(47, 158, 90, 0.14); color: var(--color-ok-500); }
+.badge-warn { background: rgba(217, 154, 31, 0.16); color: var(--color-warn-500); }
+.badge-danger { background: rgba(226, 41, 74, 0.14); color: var(--color-brand-500); }
+.badge-neutral { background: var(--color-ink-100); color: var(--color-ink-500); }
+@media (prefers-color-scheme: dark) {
+  .badge-neutral { background: var(--color-ink-800); color: var(--color-ink-300); }
 }

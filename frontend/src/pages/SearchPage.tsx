@@ -15,12 +15,12 @@ export default function SearchPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-semibold">Results for "{q}"</h1>
+      <h1 className="mb-6 text-xl font-bold">Results for "{q}"</h1>
 
       {isLoading && <Spinner label="Searching..." />}
-      {isError && <p className="text-red-600">Search failed.</p>}
+      {isError && <p className="text-[var(--color-brand-500)]">Search failed.</p>}
       {data && data.items.length === 0 && (
-        <p className="text-neutral-500">No matches found.</p>
+        <p className="text-[var(--color-ink-500)]">No matches found.</p>
       )}
 
       <div className="space-y-2">
@@ -28,12 +28,10 @@ export default function SearchPage() {
           <Link
             key={`${item.type}-${item.id}`}
             to={item.type === "movie" ? `/movies/${item.id}` : `/theatres/${item.id}`}
-            className="block rounded-lg border border-neutral-200 p-3 hover:shadow-md dark:border-neutral-800"
+            className="card flex items-center gap-3 p-4 transition-transform hover:-translate-y-0.5 hover:shadow-lg"
           >
-            <span className="mr-2 rounded bg-neutral-100 px-2 py-0.5 text-xs uppercase text-neutral-500 dark:bg-neutral-800">
-              {item.type}
-            </span>
-            {item.name}
+            <span className="badge badge-neutral">{item.type}</span>
+            <span className="font-medium">{item.name}</span>
           </Link>
         ))}
       </div>

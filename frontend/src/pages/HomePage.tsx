@@ -13,34 +13,48 @@ export default function HomePage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-semibold">Now Showing</h1>
+      <section className="mb-10 overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--color-ink-950)] via-[var(--color-ink-900)] to-[var(--color-brand-600)] px-8 py-14 text-white">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-gold-400)]">
+          Now Booking
+        </p>
+        <h1 className="mt-2 max-w-lg text-4xl font-extrabold leading-tight sm:text-5xl">
+          Your seat is waiting.
+        </h1>
+        <p className="mt-3 max-w-md text-[var(--color-ink-200)]">
+          Browse what's playing, lock your seats in real time, and book in seconds.
+        </p>
+      </section>
+
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-xl font-bold">Now Showing</h2>
+      </div>
 
       {isLoading && <CardSkeletonGrid />}
-      {isError && <p className="text-red-600">Could not load movies.</p>}
+      {isError && <p className="text-[var(--color-brand-500)]">Could not load movies.</p>}
       {movies && movies.length === 0 && (
-        <p className="text-neutral-500">No movies available right now.</p>
+        <p className="text-[var(--color-ink-500)]">No movies available right now.</p>
       )}
 
       {!isLoading && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
           {movies?.map((movie) => (
             <MovieCard key={movie.id} movie={movie} />
           ))}
         </div>
       )}
 
-      <div className="mt-6 flex justify-center gap-2">
+      <div className="mt-8 flex justify-center gap-2">
         <button
           disabled={page === 1}
           onClick={() => setPage((p) => p - 1)}
-          className="rounded-md border border-neutral-300 px-3 py-1 text-sm disabled:opacity-40 dark:border-neutral-700"
+          className="btn btn-ghost"
         >
           Previous
         </button>
         <button
           disabled={!movies || movies.length < 12}
           onClick={() => setPage((p) => p + 1)}
-          className="rounded-md border border-neutral-300 px-3 py-1 text-sm disabled:opacity-40 dark:border-neutral-700"
+          className="btn btn-ghost"
         >
           Next
         </button>

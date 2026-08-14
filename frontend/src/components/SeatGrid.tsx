@@ -20,19 +20,25 @@ export default function SeatGrid({ layout, selected, onToggleSeat }: Props) {
 
   return (
     <div>
-      <div className="mb-4 flex justify-center">
-        <div className="w-2/3 rounded-t-full bg-neutral-300 py-1 text-center text-xs text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300">
-          SCREEN
+      <div className="mb-8 flex justify-center">
+        <div className="relative h-6 w-4/5 max-w-md">
+          <div
+            className="absolute inset-0 rounded-[50%] bg-gradient-to-b from-[var(--color-gold-500)]/60 to-transparent"
+            style={{ clipPath: "polygon(0% 100%, 100% 100%, 88% 0%, 12% 0%)" }}
+          />
+          <p className="absolute inset-x-0 -bottom-5 text-center text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--color-ink-400)]">
+            Screen
+          </p>
         </div>
       </div>
 
-      <div className="flex flex-col items-center gap-1">
+      <div className="mt-10 flex flex-col items-center gap-1.5 overflow-x-auto pb-2">
         {Array.from({ length: metadata.row }).map((_, row) => (
-          <div key={row} className="flex gap-1">
+          <div key={row} className="flex gap-1.5">
             {Array.from({ length: metadata.column }).map((_, col) => {
               const cell = grid[row]?.[col];
               if (!cell || cell.grid_type !== "seat") {
-                return <div key={col} className="h-7 w-7" />;
+                return <div key={col} className="h-7 w-7 shrink-0" />;
               }
 
               const seatId = seatIdByPosition.get(`${row},${col}`) ?? null;
@@ -50,11 +56,11 @@ export default function SeatGrid({ layout, selected, onToggleSeat }: Props) {
                   aria-label={seatId ?? undefined}
                   title={seatId ? `${seatId} · ${cell.category} · ₹${cell.price}` : ""}
                   className={[
-                    "h-7 w-7 rounded text-[10px] font-medium transition-colors",
-                    isBooked && "cursor-not-allowed bg-neutral-300 text-neutral-400 dark:bg-neutral-700",
-                    isLocked && "cursor-not-allowed bg-amber-200 text-amber-700 dark:bg-amber-900 dark:text-amber-400",
-                    !disabled && isSelected && "bg-purple-600 text-white",
-                    !disabled && !isSelected && "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950 dark:text-emerald-300",
+                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-t-md rounded-b-sm text-[9px] font-bold transition-all",
+                    isBooked && "cursor-not-allowed bg-[var(--color-ink-200)] text-[var(--color-ink-400)] dark:bg-[var(--color-ink-700)] dark:text-[var(--color-ink-500)]",
+                    isLocked && "cursor-not-allowed bg-[var(--color-warn-500)]/25 text-[var(--color-warn-500)]",
+                    !disabled && isSelected && "scale-110 bg-[var(--color-brand-500)] text-white shadow-md shadow-[var(--color-brand-500)]/30",
+                    !disabled && !isSelected && "bg-[var(--color-ok-500)]/12 text-[var(--color-ok-500)] hover:bg-[var(--color-ok-500)]/25",
                   ]
                     .filter(Boolean)
                     .join(" ")}
@@ -67,11 +73,11 @@ export default function SeatGrid({ layout, selected, onToggleSeat }: Props) {
         ))}
       </div>
 
-      <div className="mt-6 flex justify-center gap-6 text-xs text-neutral-500">
-        <Legend swatch="bg-emerald-100 dark:bg-emerald-950" label="Available" />
-        <Legend swatch="bg-purple-600" label="Selected" />
-        <Legend swatch="bg-amber-200 dark:bg-amber-900" label="Locked" />
-        <Legend swatch="bg-neutral-300 dark:bg-neutral-700" label="Booked" />
+      <div className="mt-8 flex flex-wrap justify-center gap-5 text-xs text-[var(--color-ink-500)]">
+        <Legend swatch="bg-[var(--color-ok-500)]/25" label="Available" />
+        <Legend swatch="bg-[var(--color-brand-500)]" label="Selected" />
+        <Legend swatch="bg-[var(--color-warn-500)]/40" label="Locked" />
+        <Legend swatch="bg-[var(--color-ink-200)] dark:bg-[var(--color-ink-700)]" label="Booked" />
       </div>
     </div>
   );

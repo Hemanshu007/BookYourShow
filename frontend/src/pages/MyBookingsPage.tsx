@@ -13,12 +13,12 @@ export default function MyBookingsPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-semibold">My Bookings</h1>
+      <h1 className="mb-6 text-xl font-bold">My Bookings</h1>
 
       {isLoading && <CardSkeletonGrid count={4} />}
-      {isError && <p className="text-red-600">Could not load bookings.</p>}
+      {isError && <p className="text-[var(--color-brand-500)]">Could not load bookings.</p>}
       {bookings && bookings.length === 0 && (
-        <p className="text-neutral-500">You haven't booked any tickets yet.</p>
+        <p className="text-[var(--color-ink-500)]">You haven't booked any tickets yet.</p>
       )}
 
       {!isLoading && (
@@ -29,18 +29,14 @@ export default function MyBookingsPage() {
         </div>
       )}
 
-      <div className="mt-6 flex justify-center gap-2">
-        <button
-          disabled={page === 1}
-          onClick={() => setPage((p) => p - 1)}
-          className="rounded-md border border-neutral-300 px-3 py-1 text-sm disabled:opacity-40 dark:border-neutral-700"
-        >
+      <div className="mt-8 flex justify-center gap-2">
+        <button disabled={page === 1} onClick={() => setPage((p) => p - 1)} className="btn btn-ghost">
           Previous
         </button>
         <button
           disabled={!bookings || bookings.length < 10}
           onClick={() => setPage((p) => p + 1)}
-          className="rounded-md border border-neutral-300 px-3 py-1 text-sm disabled:opacity-40 dark:border-neutral-700"
+          className="btn btn-ghost"
         >
           Next
         </button>

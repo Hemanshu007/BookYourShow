@@ -41,16 +41,13 @@ export default function AuthCallbackPage() {
   if (error) {
     return (
       <div className="mx-auto max-w-sm text-center">
-        <p className="text-red-600">{error}</p>
-        <button
-          onClick={() => navigate("/login")}
-          className="mt-4 rounded-md bg-purple-600 px-4 py-2 text-white"
-        >
+        <p className="text-[var(--color-brand-500)]">{error}</p>
+        <button onClick={() => navigate("/login")} className="btn btn-primary mt-4">
           Back to login
         </button>
       </div>
     );
   }
 
-  return <p className="text-center text-neutral-500">Signing you in...</p>;
+  return <p className="text-center text-[var(--color-ink-500)]">Signing you in...</p>;
 }

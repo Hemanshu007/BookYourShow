@@ -16,44 +16,47 @@ export default function Layout() {
     }
   }
 
+  const roleHome =
+    user?.role === "admin" ? "/admin" : user?.role === "theatre_admin" ? "/theatre-admin" : null;
+
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
-      <header className="border-b border-neutral-200 dark:border-neutral-800">
-        <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
-          <Link to="/" className="text-lg font-semibold text-purple-600">
-            BookYourShow
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-20 border-b border-[var(--color-ink-800)]/10 bg-[var(--color-ink-950)] text-[var(--color-ink-100)] dark:border-[var(--color-ink-800)]">
+        <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3.5">
+          <Link to="/" className="flex items-center gap-1.5 text-lg font-extrabold tracking-tight">
+            <span className="text-[var(--color-brand-500)]">Book</span>
+            <span>YourShow</span>
           </Link>
 
-          <form onSubmit={handleSearch} className="flex-1">
+          <form onSubmit={handleSearch} className="hidden flex-1 sm:block">
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search movies or theatres..."
-              className="w-full max-w-md rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-purple-500 dark:border-neutral-700 dark:bg-neutral-900"
+              className="w-full max-w-md rounded-full border border-[var(--color-ink-700)] bg-[var(--color-ink-900)] px-4 py-1.5 text-sm text-[var(--color-ink-100)] placeholder:text-[var(--color-ink-400)] outline-none focus:border-[var(--color-brand-500)]"
             />
           </form>
 
-          <nav className="flex items-center gap-4 text-sm">
+          <nav className="ml-auto flex items-center gap-3 text-sm">
+            {roleHome && (
+              <Link to={roleHome} className="hidden font-medium text-[var(--color-ink-200)] hover:text-white sm:inline">
+                {user?.role === "admin" ? "Admin" : "Theatre Admin"}
+              </Link>
+            )}
             {user ? (
               <>
-                <Link to="/my-bookings" className="hover:text-purple-600">
+                <Link to="/my-bookings" className="hidden font-medium text-[var(--color-ink-200)] hover:text-white sm:inline">
                   My Bookings
                 </Link>
-                <Link to="/profile" className="hover:text-purple-600">
-                  {user.user_detail?.first_name ?? user.email}
+                <Link to="/profile" className="font-medium text-[var(--color-ink-200)] hover:text-white">
+                  {user.user_detail?.first_name ?? user.email.split("@")[0]}
                 </Link>
-                <button
-                  onClick={logout}
-                  className="rounded-md border border-neutral-300 px-3 py-1 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900"
-                >
+                <button onClick={logout} className="btn btn-ghost !border-[var(--color-ink-700)] !text-[var(--color-ink-200)] hover:!bg-[var(--color-ink-800)]">
                   Logout
                 </button>
               </>
             ) : (
-              <Link
-                to="/login"
-                className="rounded-md bg-purple-600 px-3 py-1.5 text-white hover:bg-purple-700"
-              >
+              <Link to="/login" className="btn btn-primary">
                 Login
               </Link>
             )}
@@ -61,7 +64,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6">
+      <main className="mx-auto max-w-6xl px-4 py-8">
         <Outlet />
       </main>
     </div>
