@@ -8,6 +8,12 @@
 
 A full-stack movie ticket booking platform — a BookMyShow-style app with real-time seat locking under concurrent load, role-based access control, and a React customer app on top of an async FastAPI backend.
 
+## Live Demo
+
+**[bookyourshow-alb-977856102.ap-south-1.elb.amazonaws.com](http://bookyourshow-alb-977856102.ap-south-1.elb.amazonaws.com)** — deployed on AWS (ECS Fargate, RDS, ElastiCache, ALB) via the Terraform in [`infra/`](infra/).
+
+Log in with any email via OTP to try the customer flow (browse → seat selection → book → cancel). This is a demo deployment brought up on demand rather than run continuously — see [`infra/`](infra/) for the infrastructure-as-code behind it.
+
 ## Why this project
 
 Booking systems live or die on one hard problem: **two people must never be sold the same seat.** This project solves it with layered concurrency control (Redis atomic locks + a database-level partial unique constraint) and has an actual load test proving it — 200 concurrent users hammering the same show, zero double-bookings.
